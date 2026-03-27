@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>레퍼럴 ROI 시뮬레이터 — keytrend.co.kr</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f7f7f5; --bg3: #f0efe9;
+    --text: #1a1a18; --text2: #5f5e5a; --text3: #888780;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+    --green-bg: #eaf3de; --green-text: #27500a;
+    --blue-bg: #e6f1fb; --blue-text: #0c447c;
+    --amber-bg: #faeeda; --amber-text: #633806;
+    --red-bg: #fcebeb; --red-text: #791f1f;
+    --radius: 10px; --radius-sm: 6px;
+    --blue: #378ADD; --green: #3B6D11; --amber: #BA7517; --red: #E24B4A;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c; --bg2: #2a2a28; --bg3: #333330;
+      --text: #e8e6de; --text2: #b4b2a9; --text3: #888780;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+      --green-bg: #173404; --green-text: #c0dd97;
+      --blue-bg: #042c53; --blue-text: #b5d4f4;
+      --amber-bg: #412402; --amber-text: #fac775;
+      --red-bg: #501313; --red-text: #f7c1c1;
+    }
+  }
+  body { background: var(--bg3); font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+  header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 1rem 1.5rem; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 16px; font-weight: 500; }
+  header span { font-size: 12px; color: var(--text3); }
+  .main { max-width: 900px; margin: 0 auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 16px; }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
+  .section-label { font-size: 10px; font-weight: 500; color: var(--text3); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 14px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } .grid4 { grid-template-columns: repeat(2, 1fr); } }
+  .metric { background: var(--bg2); border-radius: var(--radius-sm); padding: 14px; text-align: center; }
+  .metric-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+  .metric-val { font-size: 22px; font-weight: 500; }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .slider-label { font-size: 13px; color: var(--text2); min-width: 150px; }
+  .slider-val { font-size: 13px; font-weight: 500; min-width: 90px; text-align: right; color: var(--text); }
+  input[type=range] { flex: 1; accent-color: var(--blue); cursor: pointer; }
+  .funnel-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
+  .funnel-row:last-child { border-bottom: none; }
+  .funnel-num { font-size: 20px; font-weight: 500; min-width: 90px; }
+  .funnel-desc { font-size: 12px; color: var(--text2); flex: 1; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+  .badge-blue { background: var(--blue-bg); color: var(--blue-text); }
+  .badge-green { background: var(--green-bg); color: var(--green-text); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber-text); }
+  .bar-block { margin-bottom: 10px; }
+  .bar-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .bar-track { background: var(--bg2); border-radius: 4px; height: 22px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 500; transition: width .35s ease; min-width: 28px; }
+  .verdict { border-radius: var(--radius); padding: 1rem 1.25rem; margin-top: 4px; }
+  .verdict-pass { background: var(--green-bg); border: 1px solid rgba(59,109,17,.25); }
+  .verdict-warn { background: var(--amber-bg); border: 1px solid rgba(186,117,23,.25); }
+  .verdict-danger { background: var(--red-bg); border: 1px solid rgba(226,75,74,.25); }
+  .verdict-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+  .verdict-body { font-size: 13px; color: var(--text2); line-height: 1.65; }
+  .note { font-size: 11px; color: var(--text3); margin-top: 8px; }
+  .reward-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .reward-table th { text-align: left; font-weight: 500; font-size: 11px; color: var(--text3); padding: 6px 8px; border-bottom: 0.5px solid var(--border); }
+  .reward-table td { padding: 8px; border-bottom: 0.5px solid var(--border); color: var(--text); }
+  .reward-table tr:last-child td { border-bottom: none; }
+  .reward-table .val { font-weight: 500; color: var(--blue-text); }
+  .divider { border: none; border-top: 0.5px solid var(--border); margin: 0; }
+  footer { text-align: center; font-size: 11px; color: var(--text3); padding: 2rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>레퍼럴 ROI 시뮬레이터</h1>
+    <span>keytrend.co.kr · binss.co.kr · $1 = ₩1,504 기준</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <div class="grid2">
+
+    <div class="card">
+      <div class="section-label">파라미터 조정</div>
+      <div class="slider-row">
+        <span class="slider-label">월 구독료</span>
+        <input type="range" id="price" min="9900" max="49900" step="1000" value="19900">
+        <span class="slider-val" id="price-out">₩19,900</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">평균 구독 기간</span>
+        <input type="range" id="months" min="1" max="24" step="1" value="6">
+        <span class="slider-val" id="months-out">6개월</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">인당 평균 추천 수</span>
+        <input type="range" id="refs" min="1" max="10" step="1" value="4">
+        <span class="slider-val" id="refs-out">4명</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">무료 가입 전환율</span>
+        <input type="range" id="freeconv" min="5" max="80" step="5" value="40">
+        <span class="slider-val" id="freeconv-out">40%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">유료 전환율</span>
+        <input type="range" id="paidconv" min="5" max="60" step="5" value="25">
+        <span class="slider-val" id="paidconv-out">25%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">복잡한 질문 사용량</span>
+        <input type="range" id="usage" min="5" max="60" step="5" value="20">
+        <span class="slider-val" id="usage-out">20회/월</span>
+      </div>
+      <p class="note">복잡한 질문 API 원가: ₩5/회 고정 (Sonnet 4.6 · $1=₩1,504)</p>
+    </div>
+
+    <div class="card">
+      <div class="section-label">추천인 100명 퍼널</div>
+      <div class="funnel-row">
+        <div><div class="funnel-num">100명</div><div class="funnel-desc">추천인 기준 (1단계 발동)</div></div>
+        <span class="badge badge-blue">기준</span>
+      </div>
+      <div class="funnel-row">
+        <div><div class="funnel-num" id="f1">—</div><div class="funnel-desc">발송된 추천 링크</div></div>
+        <span class="badge badge-blue" id="f1b">—</span>
+      </div>
+      <div class="funnel-row">
+        <div><div class="funnel-num" id="f2">—</div><div class="funnel-desc">무료 가입 완료 → 1단계 보상</div></div>
+        <span class="badge badge-green" id="f2b">—</span>
+      </div>
+      <div class="funnel-row">
+        <div><div class="funnel-num" id="f3">—</div><div class="funnel-desc">유료 전환 → 2단계 보상</div></div>
+        <span class="badge badge-amber" id="f3b">—</span>
+      </div>
+      <div class="funnel-row">
+        <div><div class="funnel-num" id="f4">—</div><div class="funnel-desc">총 보상 지급 비용</div></div>
+        <span class="badge badge-amber" id="f4b">—</span>
+      </div>
+
+      <hr style="margin:14px 0;border:none;border-top:0.5px solid var(--border)">
+      <div class="section-label" style="margin-bottom:8px">보상 원가 상세</div>
+      <table class="reward-table">
+        <thead><tr><th>단계</th><th>조건</th><th>원가</th></tr></thead>
+        <tbody>
+          <tr><td>1단계</td><td>무료 가입 (추천인+5회, 피추천인+3회)</td><td class="val">₩40</td></tr>
+          <tr><td>2단계</td><td>유료 결제 (추천인+30회, 피추천인 20%할인+10회)</td><td class="val" id="stage2cost">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <div class="section-label">핵심 지표 (추천인 100명 기준)</div>
+    <div class="grid4" style="margin-bottom:16px">
+      <div class="metric"><div class="metric-label">LTV (유료 1인당)</div><div class="metric-val" id="m-ltv">—</div></div>
+      <div class="metric"><div class="metric-label">CAC (유료 1인당)</div><div class="metric-val" id="m-cac">—</div></div>
+      <div class="metric"><div class="metric-label">LTV : CAC</div><div class="metric-val" id="m-ratio">—</div></div>
+      <div class="metric"><div class="metric-label">100명 기준 순이익</div><div class="metric-val" id="m-profit">—</div></div>
+    </div>
+
+    <div class="section-label">LTV:CAC 업계 기준 비교</div>
+    <div class="bar-block">
+      <div class="bar-meta"><span>이 플랫폼</span><span id="bar-this-val">—</span></div>
+      <div class="bar-track"><div class="bar-fill" id="bar-this" style="background:#378ADD;color:#fff">—</div></div>
+    </div>
+    <div class="bar-block">
+      <div class="bar-meta"><span>업계 최상위 기준 (10x)</span><span>10x</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:27.8%;background:#3B6D11;color:#eaf3de">10x</div></div>
+    </div>
+    <div class="bar-block">
+      <div class="bar-meta"><span>업계 우수 기준 (5x)</span><span>5x</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:13.9%;background:#BA7517;color:#faeeda">5x</div></div>
+    </div>
+    <div class="bar-block">
+      <div class="bar-meta"><span>업계 최소 기준 (3x)</span><span>3x</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:8.3%;background:#E24B4A;color:#fcebeb">3x</div></div>
+    </div>
+
+    <div class="verdict" id="verdict" style="margin-top:16px">
+      <div class="verdict-title" id="verdict-title">—</div>
+      <div class="verdict-body" id="verdict-body">—</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-label">월별 누적 순이익 추이 (유료 전환 회원 기준)</div>
+    <div style="position:relative;height:220px">
+      <canvas id="profitChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<footer>keytrend.co.kr / binss.co.kr 내부 운영 자료 · 환율 $1 = ₩1,504</footer>
+
+<script>
+const KRW = n => '₩' + Math.round(n).toLocaleString('ko-KR');
+const NUM = n => Math.round(n).toLocaleString('ko-KR');
+const PCT = n => Math.round(n) + '%';
+
+const API_COST = 5;
+const REFERRERS = 100;
+
+let profitChart = null;
+
+function calc() {
+  const price    = +document.getElementById('price').value;
+  const months   = +document.getElementById('months').value;
+  const refs     = +document.getElementById('refs').value;
+  const freeR    = +document.getElementById('freeconv').value / 100;
+  const paidR    = +document.getElementById('paidconv').value / 100;
+  const usage    = +document.getElementById('usage').value;
+
+  document.getElementById('price-out').textContent    = KRW(price);
+  document.getElementById('months-out').textContent   = months + '개월';
+  document.getElementById('refs-out').textContent     = refs + '명';
+  document.getElementById('freeconv-out').textContent = PCT(freeR * 100);
+  document.getElementById('paidconv-out').textContent = PCT(paidR * 100);
+  document.getElementById('usage-out').textContent    = usage + '회/월';
+
+  const totalLinks  = REFERRERS * refs;
+  const freeSignups = Math.round(totalLinks * freeR);
+  const paidConvs   = Math.round(freeSignups * paidR);
+
+  const stage1Cost = (5 + 3) * API_COST;
+  const stage2Cost = (30 + 10) * API_COST + price * 0.2;
+  const totalReward = freeSignups * stage1Cost + paidConvs * stage2Cost;
+
+  const monthlyApiCost = usage * API_COST;
+  const ltvGross = price * months;
+  const ltvApi   = monthlyApiCost * months;
+  const ltv      = ltvGross - ltvApi;
+
+  const cac   = paidConvs > 0 ? totalReward / paidConvs : 0;
+  const ratio  = cac > 0 ? ltv / cac : 0;
+
+  const totalRevenue = paidConvs * ltvGross;
+  const totalApi     = paidConvs * ltvApi;
+  const netProfit    = totalRevenue - totalApi - totalReward;
+
+  document.getElementById('stage2cost').textContent = KRW(stage2Cost);
+  document.getElementById('f1').textContent  = NUM(totalLinks) + '명';
+  document.getElementById('f1b').textContent = refs + '명 × 100';
+  document.getElementById('f2').textContent  = NUM(freeSignups) + '명';
+  document.getElementById('f2b').textContent = PCT(freeR * 100) + ' 전환';
+  document.getElementById('f3').textContent  = NUM(paidConvs) + '명';
+  document.getElementById('f3b').textContent = PCT(paidR * 100) + ' 전환';
+  document.getElementById('f4').textContent  = KRW(totalReward);
+  document.getElementById('f4b').textContent = KRW(cac) + '/인';
+
+  const ratioColor = ratio >= 10 ? '#27500a' : ratio >= 5 ? '#BA7517' : ratio >= 3 ? '#378ADD' : '#E24B4A';
+  const profitColor = netProfit >= 0 ? '#27500a' : '#E24B4A';
+
+  document.getElementById('m-ltv').textContent    = KRW(ltv);
+  document.getElementById('m-cac').textContent    = KRW(cac);
+  document.getElementById('m-ratio').textContent  = ratio.toFixed(1) + 'x';
+  document.getElementById('m-ratio').style.color  = ratioColor;
+  document.getElementById('m-profit').textContent = KRW(netProfit);
+  document.getElementById('m-profit').style.color = profitColor;
+
+  const barPct = Math.min(ratio / 36 * 100, 100).toFixed(1);
+  document.getElementById('bar-this').style.width = barPct + '%';
+  document.getElementById('bar-this').textContent = ratio.toFixed(1) + 'x';
+  document.getElementById('bar-this-val').textContent = ratio.toFixed(1) + 'x';
+
+  const v = document.getElementById('verdict');
+  const vt = document.getElementById('verdict-title');
+  const vb = document.getElementById('verdict-body');
+  v.className = 'verdict';
+  if (ratio >= 10 && netProfit > 0) {
+    v.classList.add('verdict-pass');
+    vt.textContent = '사업 안전 — 보상 프로그램 적용 후에도 확실한 순이익 발생';
+    vb.textContent = `LTV:CAC ${ratio.toFixed(1)}x로 업계 최상위(10x) 기준 초과. 추천인 100명 기준 순이익 ${KRW(netProfit)}. CAC ${KRW(cac)}는 첫 달 구독료의 ${(cac/price*100).toFixed(0)}%에 불과해 1개월 내 회수 가능. 보상 프로그램은 비용이 아니라 고효율 마케팅 채널입니다.`;
+  } else if (ratio >= 5 && netProfit > 0) {
+    v.classList.add('verdict-pass');
+    vt.textContent = '사업 건전 — 순이익 발생, 보상 프로그램 지속 권장';
+    vb.textContent = `LTV:CAC ${ratio.toFixed(1)}x로 업계 우수 기준(5x) 충족. 100명 기준 순이익 ${KRW(netProfit)} 발생. 망하지 않습니다.`;
+  } else if (ratio >= 3 && netProfit > 0) {
+    v.classList.add('verdict-pass');
+    vt.textContent = '사업 유지 가능 — 최소 기준 충족, 구독 기간 연장 시 개선';
+    vb.textContent = `LTV:CAC ${ratio.toFixed(1)}x로 최소 기준(3x) 충족. 순이익 ${KRW(netProfit)} 발생. 구독 기간 연장이나 유료 전환율 개선으로 수익성 향상 가능.`;
+  } else {
+    v.classList.add('verdict-danger');
+    vt.textContent = '주의 — 파라미터 점검 필요';
+    vb.textContent = `LTV:CAC ${ratio.toFixed(1)}x. 실제 구독료와 전환율을 입력해 재확인하세요.`;
+  }
+
+  const labels = Array.from({length: months}, (_, i) => (i+1) + '개월');
+  const cumRevenue = labels.map((_, i) => paidConvs * price * (i+1));
+  const cumCost    = labels.map((_, i) => paidConvs * monthlyApiCost * (i+1) + totalReward);
+  const cumProfit  = labels.map((_, i) => cumRevenue[i] - cumCost[i]);
+
+  if (profitChart) profitChart.destroy();
+  profitChart = new Chart(document.getElementById('profitChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: '누적 매출', data: cumRevenue, borderColor: '#378ADD', backgroundColor: 'rgba(55,138,221,0.08)', fill: true, tension: 0.3, pointRadius: 3 },
+        { label: '누적 비용', data: cumCost,    borderColor: '#E24B4A', backgroundColor: 'rgba(226,75,74,0.06)',   fill: true, tension: 0.3, pointRadius: 3 },
+        { label: '누적 순이익', data: cumProfit, borderColor: '#3B6D11', backgroundColor: 'rgba(59,109,17,0.08)',  fill: true, tension: 0.3, pointRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'top', labels: { font: { size: 12 }, boxWidth: 12 } } },
+      scales: {
+        x: { ticks: { font: { size: 11 }, autoSkip: true, maxRotation: 0 }, grid: { display: false } },
+        y: { ticks: { font: { size: 11 }, callback: v => '₩' + (v/10000).toFixed(0) + '만' }, grid: { color: 'rgba(128,128,128,0.1)' } }
+      }
+    }
+  });
+}
+
+['price','months','refs','freeconv','paidconv','usage'].forEach(id => {
+  document.getElementById(id).addEventListener('input', calc);
+});
+calc();
+</script>
+</body>
+</html>
