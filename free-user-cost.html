@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>무료 마케팅 사용자 원가 계산기 — storyapple.co.kr</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg2:#f7f7f5;--bg3:#f0efe9;
+  --text:#1a1a18;--text2:#5f5e5a;--text3:#888780;
+  --border:rgba(0,0,0,0.12);
+  --green-bg:#eaf3de;--green-text:#27500a;
+  --blue-bg:#e6f1fb;--blue-text:#0c447c;
+  --amber-bg:#faeeda;--amber-text:#633806;
+  --red-bg:#fcebeb;--red-text:#791f1f;
+  --r:10px;--rs:6px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1e1e1c;--bg2:#2a2a28;--bg3:#333330;
+  --text:#e8e6de;--text2:#b4b2a9;--text3:#888780;
+  --border:rgba(255,255,255,0.1);
+  --green-bg:#173404;--green-text:#c0dd97;
+  --blue-bg:#042c53;--blue-text:#b5d4f4;
+  --amber-bg:#412402;--amber-text:#fac775;
+  --red-bg:#501313;--red-text:#f7c1c1;
+}}
+body{background:var(--bg3);font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+header{background:var(--bg);border-bottom:0.5px solid var(--border);padding:1rem 1.5rem}
+header h1{font-size:16px;font-weight:500}
+header p{font-size:11px;color:var(--text3);margin-top:2px}
+.main{max-width:960px;margin:0 auto;padding:1.5rem;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:1.25rem}
+.sec{font-size:10px;font-weight:500;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media(max-width:640px){.grid4{grid-template-columns:repeat(2,1fr)}}
+.metric{background:var(--bg2);border-radius:var(--rs);padding:14px;text-align:center}
+.metric-label{font-size:11px;color:var(--text3);margin-bottom:6px}
+.metric-val{font-size:22px;font-weight:500}
+.srow{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.slabel{font-size:13px;color:var(--text2);min-width:160px}
+.sval{font-size:13px;font-weight:500;min-width:100px;text-align:right}
+input[type=range]{flex:1;accent-color:#378ADD;cursor:pointer}
+.note{font-size:11px;color:var(--text3);margin-top:8px}
+.tbl-wrap{overflow-x:auto;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:right;font-size:11px;font-weight:500;color:var(--text3);padding:7px 10px;border-bottom:0.5px solid var(--border);white-space:nowrap}
+thead th:first-child{text-align:left}
+tbody td{padding:7px 10px;border-bottom:0.5px solid var(--border);text-align:right;white-space:nowrap}
+tbody td:first-child{text-align:left;font-weight:500}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.highlight{background:var(--amber-bg)}
+tbody tr.highlight td{color:var(--amber-text);font-weight:500}
+.verdict{border-radius:var(--r);padding:1rem 1.25rem;background:var(--green-bg);border:1px solid rgba(59,109,17,.2)}
+.vtitle{font-size:15px;font-weight:500;margin-bottom:6px}
+.vbody{font-size:13px;color:var(--text2);line-height:1.65}
+footer{text-align:center;font-size:11px;color:var(--text3);padding:2rem}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>무료 마케팅 사용자 원가 계산기</h1>
+  <p>storyapple.co.kr · 복잡한 질문 무료 제공 시 순지출 분석 · $1 = ₩1,504 · API 원가 ₩5/회</p>
+</header>
+
+<div class="main">
+
+  <div class="card">
+    <div class="sec">파라미터 조정</div>
+    <div class="srow">
+      <span class="slabel">무료 제공 기간</span>
+      <input type="range" id="months" min="1" max="12" step="1" value="6">
+      <span class="sval" id="months-out">6개월</span>
+    </div>
+    <div class="srow">
+      <span class="slabel">월 복잡한 질문 제공량</span>
+      <input type="range" id="usage" min="10" max="300" step="10" value="200">
+      <span class="sval" id="usage-out">200회/월</span>
+    </div>
+    <div class="srow">
+      <span class="slabel">무료 사용자 수 (조회)</span>
+      <input type="range" id="users" min="1" max="1000" step="1" value="10">
+      <span class="sval" id="users-out">10명</span>
+    </div>
+    <p class="note">순지출 = 무료 사용자 수 × 월 제공량 × 기간 × ₩5 (API 원가만 계산 · 고정비 제외)</p>
+  </div>
+
+  <div class="grid4">
+    <div class="metric"><div class="metric-label">1인당 월 원가</div><div class="metric-val" id="m-per-mo">—</div></div>
+    <div class="metric"><div class="metric-label">1인당 총 원가</div><div class="metric-val" id="m-per-total">—</div></div>
+    <div class="metric"><div class="metric-label" id="m-n-label">선택 인원 총 원가</div><div class="metric-val" id="m-n-total">—</div></div>
+    <div class="metric"><div class="metric-label">1000명 총 원가</div><div class="metric-val" id="m-1000">—</div></div>
+  </div>
+
+  <div class="card">
+    <div class="sec">무료 사용자 수별 순지출 (1~1000명)</div>
+    <div style="position:relative;height:280px">
+      <canvas id="costChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sec">구간별 원가 상세표</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">무료 사용자 수</th>
+            <th>1인당 총 원가</th>
+            <th>총 순지출</th>
+            <th>월 평균 지출</th>
+            <th>일 평균 지출</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="verdict" id="verdict">
+    <div class="vtitle" id="vtitle">—</div>
+    <div class="vbody"  id="vbody">—</div>
+  </div>
+
+</div>
+
+<footer>storyapple.co.kr / keytrend.co.kr 내부 운영 자료 · API 원가 ₩5/회 · $1 = ₩1,504</footer>
+
+<script>
+const KRW  = n => '₩' + Math.round(n).toLocaleString('ko-KR');
+const API  = 5;
+let ch = null;
+
+function calc(){
+  const months = +document.getElementById('months').value;
+  const usage  = +document.getElementById('usage').value;
+  const users  = +document.getElementById('users').value;
+
+  document.getElementById('months-out').textContent = months + '개월';
+  document.getElementById('usage-out').textContent  = usage + '회/월';
+  document.getElementById('users-out').textContent  = users.toLocaleString('ko-KR') + '명';
+
+  const perMo    = usage * API;
+  const perTotal = perMo * months;
+  const nTotal   = perTotal * users;
+  const total1000= perTotal * 1000;
+
+  document.getElementById('m-per-mo').textContent    = KRW(perMo) + '/월';
+  document.getElementById('m-per-total').textContent = KRW(perTotal);
+  document.getElementById('m-n-label').textContent   = users.toLocaleString('ko-KR') + '명 총 원가';
+  document.getElementById('m-n-total').textContent   = KRW(nTotal);
+  document.getElementById('m-n-total').style.color   = nTotal > 1000000 ? 'var(--red-text)' : 'var(--green-text)';
+  document.getElementById('m-1000').textContent      = KRW(total1000);
+
+  const milestones = [1,5,10,20,30,50,100,200,300,500,700,1000];
+  let tbHtml = '';
+  milestones.forEach(n => {
+    const tot   = perTotal * n;
+    const moAvg = tot / months;
+    const dayAvg= tot / (months * 30);
+    const hl    = n === users ? ' class="highlight"' : '';
+    tbHtml += `<tr${hl}>
+      <td>${n.toLocaleString('ko-KR')}명</td>
+      <td>${KRW(perTotal)}</td>
+      <td>${KRW(tot)}</td>
+      <td>${KRW(moAvg)}/월</td>
+      <td>${KRW(dayAvg)}/일</td>
+    </tr>`;
+  });
+  document.getElementById('tbl-body').innerHTML = tbHtml;
+
+  const points = [1,10,20,50,100,200,300,500,700,1000];
+  const labels = points.map(n => n + '명');
+  const data   = points.map(n => perTotal * n);
+
+  if(ch) ch.destroy();
+  ch = new Chart(document.getElementById('costChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: '총 순지출',
+        data,
+        backgroundColor: data.map(v =>
+          v <= 100000  ? 'rgba(59,109,17,0.7)' :
+          v <= 500000  ? 'rgba(186,117,23,0.7)' :
+                         'rgba(226,75,74,0.7)'),
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' ' + KRW(ctx.parsed.y) } }
+      },
+      scales: {
+        x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+        y: { ticks: { font: { size: 11 }, callback: v => {
+          if(v >= 1000000) return '₩' + (v/1000000).toFixed(1) + '백만';
+          if(v >= 10000)   return '₩' + (v/10000).toFixed(0) + '만';
+          return '₩' + v;
+        }}, grid: { color: 'rgba(128,128,128,0.1)' } }
+      }
+    }
+  });
+
+  const v  = document.getElementById('verdict');
+  const vt = document.getElementById('vtitle');
+  const vb = document.getElementById('vbody');
+
+  vt.textContent = `무료 ${users.toLocaleString()}명 × ${usage}회/월 × ${months}개월 = 총 순지출 ${KRW(nTotal)}`;
+  vb.textContent =
+    `1인당 월 원가 ${KRW(perMo)}, ${months}개월 총 ${KRW(perTotal)}. `
+    + `${users}명 기준 총 지출 ${KRW(nTotal)} (월 평균 ${KRW(nTotal/months)}). `
+    + `이를 광고비로 환산하면 1인 획득 원가(CAC) ${KRW(perTotal)}으로, `
+    + `업계 평균 디지털 광고 CAC(₩15,000~₩50,000) 대비 ${(perTotal < 15000 ? '매우 저렴한' : '유사한')} 수준입니다. `
+    + `1000명까지 확대해도 총 지출 ${KRW(total1000)}으로 유료 전환 시 즉시 회수 가능한 구조입니다.`;
+}
+
+['months','usage','users'].forEach(id =>
+  document.getElementById(id).addEventListener('input', calc)
+);
+calc();
+</script>
+</body>
+</html>
