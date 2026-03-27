@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>월간 vs 연간 구독 비교 — storyapple.co.kr</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg2:#f7f7f5;--bg3:#f0efe9;
+  --text:#1a1a18;--text2:#5f5e5a;--text3:#888780;
+  --border:rgba(0,0,0,0.12);
+  --green-bg:#eaf3de;--green-text:#27500a;
+  --blue-bg:#e6f1fb;--blue-text:#0c447c;
+  --amber-bg:#faeeda;--amber-text:#633806;
+  --red-bg:#fcebeb;--red-text:#791f1f;
+  --r:10px;--rs:6px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1e1e1c;--bg2:#2a2a28;--bg3:#333330;
+  --text:#e8e6de;--text2:#b4b2a9;--text3:#888780;
+  --border:rgba(255,255,255,0.1);
+  --green-bg:#173404;--green-text:#c0dd97;
+  --blue-bg:#042c53;--blue-text:#b5d4f4;
+  --amber-bg:#412402;--amber-text:#fac775;
+  --red-bg:#501313;--red-text:#f7c1c1;
+}}
+body{background:var(--bg3);font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+header{background:var(--bg);border-bottom:0.5px solid var(--border);padding:1rem 1.5rem}
+header h1{font-size:16px;font-weight:500}
+header p{font-size:11px;color:var(--text3);margin-top:2px}
+.main{max-width:960px;margin:0 auto;padding:1.5rem;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:1.25rem}
+.card.winner{border:2px solid #3B6D11}
+.sec{font-size:10px;font-weight:500;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,1fr)}}
+.metric{background:var(--bg2);border-radius:var(--rs);padding:14px;text-align:center}
+.metric-label{font-size:11px;color:var(--text3);margin-bottom:6px}
+.metric-val{font-size:20px;font-weight:500}
+.srow{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.slabel{font-size:13px;color:var(--text2);min-width:150px}
+.sval{font-size:13px;font-weight:500;min-width:100px;text-align:right}
+input[type=range]{flex:1;accent-color:#378ADD;cursor:pointer}
+.badge{display:inline-block;font-size:11px;padding:2px 10px;border-radius:4px;margin-bottom:10px;font-weight:500}
+.badge-blue{background:var(--blue-bg);color:var(--blue-text)}
+.badge-green{background:var(--green-bg);color:var(--green-text)}
+.badge-best{background:#27500a;color:#eaf3de}
+.card-title{font-size:16px;font-weight:500;margin-bottom:4px}
+.card-sub{font-size:12px;color:var(--text2);margin-bottom:14px}
+.row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px}
+.row:last-child{border-bottom:none}
+.row .label{color:var(--text2)}
+.row .val{font-weight:500}
+.green{color:var(--green-text)}
+.red{color:var(--red-text)}
+.blue{color:var(--blue-text)}
+.amber{color:var(--amber-text)}
+.bar-block{margin-bottom:10px}
+.bar-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px}
+.bar-track{background:var(--bg2);border-radius:4px;height:20px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:500;transition:width .35s ease;min-width:30px}
+.verdict{border-radius:var(--r);padding:1rem 1.25rem}
+.vpass{background:var(--green-bg);border:1px solid rgba(59,109,17,.25)}
+.vinfo{background:var(--blue-bg);border:1px solid rgba(55,138,221,.2)}
+.vtitle{font-size:15px;font-weight:500;margin-bottom:6px}
+.vbody{font-size:13px;color:var(--text2);line-height:1.65}
+.note{font-size:11px;color:var(--text3);margin-top:8px}
+.tip{background:var(--amber-bg);border-radius:var(--rs);padding:10px 14px;font-size:13px;color:var(--amber-text);margin-top:12px}
+footer{text-align:center;font-size:11px;color:var(--text3);padding:2rem}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>월간 vs 연간 구독 비교 분석기</h1>
+  <p>storyapple.co.kr · keytrend.co.kr · $1 = ₩1,504 · API 원가 ₩5/회</p>
+</header>
+
+<div class="main">
+
+  <div class="card">
+    <div class="sec">파라미터 조정</div>
+    <div class="srow">
+      <span class="slabel">월 구독료</span>
+      <input type="range" id="price" min="9900" max="49900" step="1000" value="9900">
+      <span class="sval" id="price-out">₩9,900</span>
+    </div>
+    <div class="srow">
+      <span class="slabel">연간 구독 할인율</span>
+      <input type="range" id="disc" min="0" max="30" step="5" value="0">
+      <span class="sval" id="disc-out">0% (할인 없음)</span>
+    </div>
+    <div class="srow">
+      <span class="slabel">월간 구독 평균 유지 기간</span>
+      <input type="range" id="churn" min="1" max="12" step="1" value="4">
+      <span class="sval" id="churn-out">4개월</span>
+    </div>
+    <div class="srow">
+      <span class="slabel">월 복잡한 질문 사용량</span>
+      <input type="range" id="usage" min="10" max="300" step="10" value="200">
+      <span class="sval" id="usage-out">200회/월</span>
+    </div>
+    <p class="note">API 원가 ₩5/회 고정 · 연간 구독은 12개월 보장 (선납) · $1 = ₩1,504</p>
+  </div>
+
+  <div class="grid4">
+    <div class="metric"><div class="metric-label">월간 LTV</div><div class="metric-val" id="m0-ltv">—</div></div>
+    <div class="metric"><div class="metric-label">연간 LTV</div><div class="metric-val green" id="a0-ltv">—</div></div>
+    <div class="metric"><div class="metric-label">LTV 차이</div><div class="metric-val" id="diff-ltv">—</div></div>
+    <div class="metric"><div class="metric-label">손익분기 유지기간</div><div class="metric-val" id="breakeven">—</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card" id="card-m">
+      <span class="badge badge-blue">월간 구독</span>
+      <div class="card-title">매달 결제</div>
+      <div class="card-sub" id="m-sub">₩9,900/월</div>
+      <div class="row"><span class="label">평균 유지 기간</span><span class="val" id="m-months">—</span></div>
+      <div class="row"><span class="label">총 매출</span><span class="val" id="m-rev">—</span></div>
+      <div class="row"><span class="label">총 API 원가</span><span class="val red" id="m-api">—</span></div>
+      <div class="row"><span class="label">LTV (순)</span><span class="val green" id="m-ltv">—</span></div>
+      <div class="row"><span class="label">월 순이익</span><span class="val" id="m-monthly-profit">—</span></div>
+      <div class="row"><span class="label">이탈 위험</span><span class="val red">매월 존재</span></div>
+      <div class="row"><span class="label">현금흐름</span><span class="val amber">월별 분산</span></div>
+      <div class="row"><span class="label">LTV 확실성</span><span class="val red">불확실</span></div>
+    </div>
+
+    <div class="card" id="card-a">
+      <span class="badge" id="a-badge">연간 구독</span>
+      <div class="card-title">연간 일시 결제</div>
+      <div class="card-sub" id="a-sub">₩9,900×12/년</div>
+      <div class="row"><span class="label">유지 기간</span><span class="val green">12개월 보장</span></div>
+      <div class="row"><span class="label">총 매출</span><span class="val" id="a-rev">—</span></div>
+      <div class="row"><span class="label">총 API 원가</span><span class="val red" id="a-api">—</span></div>
+      <div class="row"><span class="label">LTV (순)</span><span class="val green" id="a-ltv">—</span></div>
+      <div class="row"><span class="label">월 평균 순이익</span><span class="val" id="a-monthly-profit">—</span></div>
+      <div class="row"><span class="label">이탈 위험</span><span class="val green">없음 (선결제)</span></div>
+      <div class="row"><span class="label">현금흐름</span><span class="val green">선납 유리</span></div>
+      <div class="row"><span class="label">LTV 확실성</span><span class="val green">100% 확정</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sec">이탈 시나리오별 LTV 비교 (월간 구독)</div>
+    <div id="churn-bars"></div>
+    <div class="tip" id="tip">—</div>
+  </div>
+
+  <div class="card">
+    <div class="sec">월별 누적 순이익 비교</div>
+    <div style="position:relative;height:260px">
+      <canvas id="profitChart"></canvas>
+    </div>
+  </div>
+
+  <div class="verdict" id="verdict">
+    <div class="vtitle" id="vtitle">—</div>
+    <div class="vbody"  id="vbody">—</div>
+  </div>
+
+</div>
+
+<footer>storyapple.co.kr / keytrend.co.kr 내부 운영 자료 · $1 = ₩1,504 · API 원가 ₩5/회</footer>
+
+<script>
+const KRW = n => '₩' + Math.round(n).toLocaleString('ko-KR');
+const API = 5;
+let ch = null;
+
+function calc(){
+  const price = +document.getElementById('price').value;
+  const disc  = +document.getElementById('disc').value / 100;
+  const churn = +document.getElementById('churn').value;
+  const usage = +document.getElementById('usage').value;
+
+  document.getElementById('price-out').textContent = KRW(price);
+  document.getElementById('disc-out').textContent  = disc === 0 ? '0% (할인 없음)' : (disc*100) + '% 할인';
+  document.getElementById('churn-out').textContent = churn + '개월';
+  document.getElementById('usage-out').textContent = usage + '회/월';
+
+  const monthlyApi  = usage * API;
+  const annualPrice = price * 12 * (1 - disc);
+
+  document.getElementById('m-sub').textContent = KRW(price) + '/월';
+  document.getElementById('a-sub').textContent = disc > 0
+    ? KRW(price) + '×12 → ' + KRW(annualPrice) + '/년 (' + (disc*100) + '% 할인)'
+    : KRW(price) + ' × 12 = ' + KRW(annualPrice) + '/년';
+
+  const mRev  = price * churn;
+  const mApi  = monthlyApi * churn;
+  const mLtv  = mRev - mApi;
+  const mMoProfit = (price - monthlyApi);
+
+  const aRev  = annualPrice;
+  const aApi  = monthlyApi * 12;
+  const aLtv  = aRev - aApi;
+  const aMoProfit = (annualPrice / 12) - monthlyApi;
+
+  document.getElementById('m-months').textContent        = churn + '개월 (이탈 가정)';
+  document.getElementById('m-rev').textContent           = KRW(mRev);
+  document.getElementById('m-api').textContent           = '-' + KRW(mApi);
+  document.getElementById('m-ltv').textContent           = KRW(mLtv);
+  document.getElementById('m-monthly-profit').textContent= KRW(mMoProfit) + '/월';
+  document.getElementById('m0-ltv').textContent          = KRW(mLtv);
+
+  document.getElementById('a-rev').textContent           = KRW(aRev);
+  document.getElementById('a-api').textContent           = '-' + KRW(aApi);
+  document.getElementById('a-ltv').textContent           = KRW(aLtv);
+  document.getElementById('a-monthly-profit').textContent= KRW(aMoProfit) + '/월 평균';
+  document.getElementById('a0-ltv').textContent          = KRW(aLtv);
+
+  const diff = aLtv - mLtv;
+  document.getElementById('diff-ltv').textContent = (diff >= 0 ? '+' : '') + KRW(diff);
+  document.getElementById('diff-ltv').style.color = diff >= 0 ? 'var(--green-text)' : 'var(--red-text)';
+
+  const beMonths = Math.ceil(aLtv / (price - monthlyApi));
+  document.getElementById('breakeven').textContent = beMonths + '개월';
+
+  const cardA = document.getElementById('card-a');
+  const badge = document.getElementById('a-badge');
+  if(aLtv > mLtv){
+    cardA.style.border = '2px solid #3B6D11';
+    badge.className = 'badge badge-best';
+    badge.textContent = '연간 구독 — 더 유리';
+  } else {
+    cardA.style.border = '0.5px solid var(--border)';
+    badge.className = 'badge badge-green';
+    badge.textContent = '연간 구독';
+  }
+
+  const scenarios = [2,4,6,8,10,12];
+  const maxVal = Math.max(aLtv, price*12 - monthlyApi*12);
+  let html = `<div class="bar-block">
+    <div class="bar-meta"><span style="color:var(--green-text);font-weight:500">연간 구독 LTV (12개월 확정)</span><span style="color:var(--green-text);font-weight:500">${KRW(aLtv)}</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:100%;background:#27500a;color:#eaf3de">연간 확정</div></div>
+  </div>`;
+  scenarios.forEach(m => {
+    const ltv = price * m - monthlyApi * m;
+    const pct = Math.max(0, Math.min(ltv / maxVal * 100, 100)).toFixed(1);
+    const color = ltv >= aLtv ? '#3B6D11' : '#E24B4A';
+    const tc    = ltv >= aLtv ? '#eaf3de' : '#fcebeb';
+    html += `<div class="bar-block">
+      <div class="bar-meta"><span>${m}개월 이탈</span><span>${KRW(ltv)}</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color};color:${tc}">${m}개월</div></div>
+    </div>`;
+  });
+  document.getElementById('churn-bars').innerHTML = html;
+
+  document.getElementById('tip').textContent =
+    disc > 0
+      ? `연간 ${(disc*100)}% 할인을 줘도 12개월 보장이므로, 월간 구독자가 ${Math.ceil(aLtv/(price-monthlyApi))}개월 이상 유지해야 같은 LTV가 됩니다.`
+      : `연간 할인 없이도 월간 구독자가 ${beMonths}개월 이상 유지해야 연간과 동일한 LTV. 10~15% 할인으로 연간 전환을 유도하면 이탈 리스크를 완전히 제거할 수 있습니다.`;
+
+  const labels = Array.from({length:12}, (_,i) => (i+1) + '개월');
+  const mData  = labels.map((_,i) => {
+    const mo = i + 1;
+    return mo <= churn ? price * mo - monthlyApi * mo : null;
+  });
+  const aData  = labels.map((_,i) => annualPrice - monthlyApi * (i+1));
+
+  if(ch) ch.destroy();
+  ch = new Chart(document.getElementById('profitChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label:'연간 구독 누적 순이익', data:aData, borderColor:'#3B6D11', backgroundColor:'rgba(59,109,17,0.08)', fill:true, tension:0.3, pointRadius:4 },
+        { label:'월간 구독 누적 순이익', data:mData, borderColor:'#E24B4A', backgroundColor:'rgba(226,75,74,0.07)', fill:true, tension:0.3, pointRadius:4, spanGaps:false },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:true, position:'top', labels:{ font:{size:12}, boxWidth:12 } } },
+      scales:{
+        x:{ ticks:{ font:{size:11} }, grid:{display:false} },
+        y:{ ticks:{ font:{size:11}, callback: v => '₩'+(v/10000).toFixed(0)+'만' }, grid:{ color:'rgba(128,128,128,0.1)' } }
+      }
+    }
+  });
+
+  const v  = document.getElementById('verdict');
+  const vt = document.getElementById('vtitle');
+  const vb = document.getElementById('vbody');
+  if(churn < 12){
+    v.className = 'verdict vpass';
+    vt.textContent = '연간 구독자가 회사에 더 유리합니다';
+    vb.textContent = `월간 구독자가 ${churn}개월 만에 이탈하면 LTV ${KRW(mLtv)}이지만, 연간 구독자는 12개월이 보장되어 LTV ${KRW(aLtv)}입니다. `
+      + `차이 ${KRW(diff)}. 월간 구독자가 연간과 동일한 수익을 주려면 ${beMonths}개월 이상 유지해야 합니다. `
+      + (disc > 0 ? `연간 ${(disc*100)}% 할인을 줘도 12개월 선납 보장이라 월간보다 훨씬 유리합니다.`
+        : `연간 구독에 10~15% 할인을 제공해 유도하는 전략이 이탈 리스크를 제거하는 가장 효과적인 방법입니다.`);
+  } else {
+    v.className = 'verdict vinfo';
+    vt.textContent = '12개월 유지 시 월간도 연간과 동일';
+    vb.textContent = `월간 구독자가 12개월 유지하면 LTV ${KRW(mLtv)}으로 연간(${KRW(aLtv)})과 같아집니다. 단, 12개월을 보장할 수 없다는 리스크가 항상 존재합니다. 연간 구독은 이 불확실성을 선납으로 완전히 제거합니다.`;
+  }
+}
+
+['price','disc','churn','usage'].forEach(id =>
+  document.getElementById(id).addEventListener('input', calc)
+);
+calc();
+</script>
+</body>
+</html>
